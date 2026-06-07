@@ -1,0 +1,13 @@
+{
+	"title": "Docs",
+	"pages": [
+		"---Getting Started---",
+		"index",
+		"connections",
+		"explorer",
+		"inspector",
+		"---Reference---",
+		"configuration",
+		"keyboard-shortcuts"
+	]
+}

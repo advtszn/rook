@@ -1,0 +1,26 @@
+---
+title: Inspector
+description: Viewing key details and values.
+---
+
+The inspector shows the full value of a Redis key along with its type and TTL.
+
+![Inspector screen](/images/inspector.png) 
+
+## Value Display
+
+JSON values are automatically pretty-printed. Long values are scrollable with `j`/`k`. The scroll position indicator shows your current location in the value.
+
+## Supported Types
+
+Rook displays values for all standard Redis types: `string`, `list`, `set`, `zset`, `hash`, and `stream`.
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Scroll down |
+| `k` / `↑` | Scroll up |
+| `g` | Scroll to top |
+| `G` | Scroll to bottom |
+| `q` / `Esc` / `h` / `←` | Back to explorer |

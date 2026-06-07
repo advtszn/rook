@@ -1,0 +1,46 @@
+---
+title: Configuration
+description: How Rook stores its configuration.
+---
+
+Rook stores its configuration as JSON at:
+
+```
+~/.config/rook/config.json
+```
+
+The file is created automatically when you add your first connection.
+
+## Schema
+
+```json
+{
+  "connections": [
+    {
+      "name": "local",
+      "host": "127.0.0.1",
+      "port": 6379,
+      "username": "",
+      "password": null,
+      "database": 0,
+      "tls": false,
+      "autoRefreshInterval": null
+    }
+  ]
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Display name |
+| `host` | string | Redis hostname |
+| `port` | number | Redis port |
+| `username` | string? | ACL username |
+| `password` | string \| null | Redis password |
+| `database` | number | Database index (0-15) |
+| `tls` | boolean? | Enable TLS |
+| `autoRefreshInterval` | number \| null | Auto-refresh interval in seconds (5, 10, or 30) |
+
+You can edit this file directly, but changes won't take effect until you restart Rook.

@@ -1,0 +1,55 @@
+---
+title: Explorer
+description: Browsing and managing Redis keys.
+---
+
+The explorer uses a three-column layout (like Finder's column view) to browse your Redis keyspace as a tree. Keys are split on `:` into namespaces.
+
+![Explorer screen](/images/explorer.png)
+
+## Navigation
+
+Use `h`/`l` (or arrow keys) to move between columns and `j`/`k` to move within a column. Press `Enter` on a leaf key to open the [Inspector](/docs/inspector).
+
+## Search
+
+Press `/` to enter search mode. Type a query to filter the key tree in real time. Press `Enter` to lock the filter or `Esc` to clear it.
+
+![Search mode](/images/explorer-search.png) 
+
+## Preview
+
+When a leaf key is selected, the right column shows a preview with the key's type, TTL, and value.
+
+![Value preview](/images/explorer-preview.png) 
+
+## Auto Refresh
+
+Press `R` (Shift+r) to cycle through auto-refresh intervals: 5s, 10s, 30s, or off. The interval is saved per connection.
+
+A warning is shown when auto-refresh is enabled since it increases Redis read overhead.
+
+## Deleting Keys
+
+Press `D` (Shift+d) to delete the selected key or namespace. Deleting a namespace removes all keys under that prefix.
+
+## Copy Key Name
+
+Press `y` to copy the full key name to your clipboard.
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Move down |
+| `k` / `↑` | Move up |
+| `h` / `←` | Go to parent |
+| `l` / `→` / `Enter` | Expand / open key |
+| `g` | Jump to top |
+| `G` | Jump to bottom |
+| `/` | Search |
+| `r` | Refresh |
+| `R` | Toggle auto-refresh |
+| `y` | Copy key name |
+| `D` | Delete key or namespace |
+| `q` / `Esc` | Back to connections |

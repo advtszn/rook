@@ -1,15 +1,23 @@
-# cli
+# @rook/cli
 
-To install dependencies:
+Terminal UI for exploring Redis, built with [OpenTUI](https://opentui.com) and React.
 
-```bash
-bun install
+## Development
+
+```sh
+bun dev
 ```
 
-To run:
+## Build
 
-```bash
-bun run index.ts
+```sh
+bun run build
 ```
 
-This project was created using `bun init` in bun v1.3.13. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+Cross-platform builds:
+
+```sh
+bun run build:darwin-arm64
+bun run build:linux-x64
+bun run build:windows-x64
+```

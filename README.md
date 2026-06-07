@@ -1,15 +1,32 @@
-# react
+# Rook
 
-To install dependencies:
+A terminal UI for exploring Redis, built with [OpenTUI](https://opentui.com) and React.
 
-```bash
-bun install
+## Install
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/advtszn/rook/main/install.sh | sh
 ```
 
-To run:
+## Usage
 
-```bash
+```sh
+rook
+```
+
+## Development
+
+```sh
+bun install
+cd packages/cli
 bun dev
 ```
 
-This project was created using `bun create tui`. [create-tui](https://git.new/create-tui) is the easiest way to get started with OpenTUI.
+## Project Structure
+
+```
+apps/
+  docs/       # Documentation site (Nextra)
+packages/
+  cli/        # Terminal UI application
+```

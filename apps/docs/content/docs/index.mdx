@@ -1,0 +1,34 @@
+---
+title: Rook
+description: A terminal UI for exploring Redis.
+---
+
+Rook is a terminal UI for exploring Redis, built with [OpenTUI](https://opentui.com) and React.
+
+![Rook explorer](/images/hero.png)
+
+## Install
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/advtszn/rook/main/install.sh | sh
+```
+
+Supports macOS (Apple Silicon), Linux (x64), and Windows (x64).
+
+## Quick Start
+
+```sh
+rook
+```
+
+This opens the connections screen. Press `a` to add a new Redis connection, then `Enter` to connect.
+
+## Screens
+
+Rook has three screens:
+
+- **Connections** — manage saved Redis connections
+- **Explorer** — browse keys as a tree, search, and delete
+- **Inspector** — view key type, TTL, and value
+
+Navigate between them with keyboard shortcuts shown at the bottom of each screen.

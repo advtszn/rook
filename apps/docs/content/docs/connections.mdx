@@ -1,0 +1,52 @@
+---
+title: Connections
+description: Managing Redis connections in Rook.
+---
+
+The connections screen is the first thing you see when launching Rook. It lists all saved connections and lets you add, inspect, or delete them.
+
+![Connections screen](/images/connections.png)
+
+## Adding a Connection
+
+Press `a` to open the add connection modal. Fill in the following fields:
+
+![Add connection modal](/images/add-connection.png)
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| Name | — | Display name for the connection |
+| Host | `127.0.0.1` | Redis server hostname |
+| Port | `6379` | Redis server port |
+| Username | — | Optional, for ACL-based auth |
+| Password | — | Optional |
+| Database | `0` | Redis database index |
+| TLS | Off | Enable for encrypted connections |
+
+Press `Enter` to save or `Esc` to cancel.
+
+## Connecting
+
+Select a connection with `j`/`k` and press `Enter` to connect. Rook will open the [Explorer](/docs/explorer) screen.
+
+## Inspecting a Connection
+
+Press `i` to view the full details of a saved connection.
+
+## Deleting a Connection
+
+Press `D` (Shift+d) to delete the selected connection. A confirmation dialog will appear.
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Move down |
+| `k` / `↑` | Move up |
+| `g` | Jump to top |
+| `G` | Jump to bottom |
+| `Enter` | Connect |
+| `a` | Add connection |
+| `i` | View connection info |
+| `D` | Delete connection |
+| `q` | Quit |
