@@ -47,7 +47,8 @@ main() {
 
   if [ "$platform" = "windows" ]; then
     url="https://github.com/${REPO}/releases/download/${version}/${artifact}.zip"
-    curl -fsSL "$url" -o "${tmpdir}/${artifact}.zip"
+    echo "Downloading ${url}"
+    curl -fSL# "$url" -o "${tmpdir}/${artifact}.zip"
     unzip -q "${tmpdir}/${artifact}.zip" -d "$tmpdir"
 
     install_dir="${ROOK_INSTALL_DIR:-$USERPROFILE/.rook/bin}"
@@ -58,7 +59,8 @@ main() {
     echo "Add ${install_dir} to your PATH if it's not already there."
   else
     url="https://github.com/${REPO}/releases/download/${version}/${artifact}.tar.gz"
-    curl -fsSL "$url" -o "${tmpdir}/${artifact}.tar.gz"
+    echo "Downloading ${url}"
+    curl -fSL# "$url" -o "${tmpdir}/${artifact}.tar.gz"
     tar -xzf "${tmpdir}/${artifact}.tar.gz" -C "$tmpdir"
 
     install_dir="${ROOK_INSTALL_DIR:-/usr/local/bin}"
