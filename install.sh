@@ -2,7 +2,6 @@
 set -eu
 
 REPO="advtszn/rook"
-INSTALL_DIR="${ROOK_INSTALL_DIR:-/usr/local/bin}"
 BINARY_NAME="rook"
 
 get_arch() {
@@ -14,19 +13,20 @@ get_arch() {
   esac
 }
 
-get_os() {
+get_platform() {
   os=$(uname -s | tr '[:upper:]' '[:lower:]')
   case "$os" in
     linux) echo "linux" ;;
     darwin) echo "darwin" ;;
+    mingw*|msys*|cygwin*) echo "windows" ;;
     *) echo "Unsupported OS: $os" >&2; exit 1 ;;
   esac
 }
 
 main() {
-  os=$(get_os)
+  platform=$(get_platform)
   arch=$(get_arch)
-  artifact="rook-${os}-${arch}"
+  artifact="rook-${platform}-${arch}"
 
   if [ -n "${1:-}" ]; then
     version="$1"
@@ -40,24 +40,38 @@ main() {
     exit 1
   fi
 
-  url="https://github.com/${REPO}/releases/download/${version}/${artifact}.tar.gz"
-
-  echo "Installing rook ${version} (${os}/${arch})..."
+  echo "Installing rook ${version} (${platform}/${arch})..."
 
   tmpdir=$(mktemp -d)
   trap 'rm -rf "$tmpdir"' EXIT
 
-  curl -fsSL "$url" -o "${tmpdir}/${artifact}.tar.gz"
-  tar -xzf "${tmpdir}/${artifact}.tar.gz" -C "$tmpdir"
+  if [ "$platform" = "windows" ]; then
+    url="https://github.com/${REPO}/releases/download/${version}/${artifact}.zip"
+    curl -fsSL "$url" -o "${tmpdir}/${artifact}.zip"
+    unzip -q "${tmpdir}/${artifact}.zip" -d "$tmpdir"
 
-  if [ ! -w "$INSTALL_DIR" ]; then
-    echo "Installing to ${INSTALL_DIR} (requires sudo)..."
-    sudo install -m 755 "${tmpdir}/${artifact}" "${INSTALL_DIR}/${BINARY_NAME}"
+    install_dir="${ROOK_INSTALL_DIR:-$USERPROFILE/.rook/bin}"
+    mkdir -p "$install_dir"
+    cp "${tmpdir}/${artifact}.exe" "${install_dir}/${BINARY_NAME}.exe"
+
+    echo "Installed rook to ${install_dir}/${BINARY_NAME}.exe"
+    echo "Add ${install_dir} to your PATH if it's not already there."
   else
-    install -m 755 "${tmpdir}/${artifact}" "${INSTALL_DIR}/${BINARY_NAME}"
+    url="https://github.com/${REPO}/releases/download/${version}/${artifact}.tar.gz"
+    curl -fsSL "$url" -o "${tmpdir}/${artifact}.tar.gz"
+    tar -xzf "${tmpdir}/${artifact}.tar.gz" -C "$tmpdir"
+
+    install_dir="${ROOK_INSTALL_DIR:-/usr/local/bin}"
+    if [ ! -w "$install_dir" ]; then
+      echo "Installing to ${install_dir} (requires sudo)..."
+      sudo install -m 755 "${tmpdir}/${artifact}" "${install_dir}/${BINARY_NAME}"
+    else
+      install -m 755 "${tmpdir}/${artifact}" "${install_dir}/${BINARY_NAME}"
+    fi
+
+    echo "Installed rook to ${install_dir}/${BINARY_NAME}"
   fi
 
-  echo "Installed rook to ${INSTALL_DIR}/${BINARY_NAME}"
   echo "Run 'rook' to get started."
 }
 
