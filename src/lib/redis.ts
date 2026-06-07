@@ -87,6 +87,27 @@ export async function getKeyValue(
   }
 }
 
+export async function deleteKey(client: Redis, key: string): Promise<number> {
+  return client.del(key)
+}
+
+export async function deleteNamespace(client: Redis, prefix: string): Promise<number> {
+  let deleted = 0
+  let cursor = "0"
+  do {
+    const [nextCursor, batch] = await client.scan(cursor, "MATCH", `${prefix}:*`, "COUNT", 500)
+    cursor = nextCursor
+    if (batch.length > 0) {
+      deleted += await client.del(...batch)
+    }
+  } while (cursor !== "0")
+  const exists = await client.exists(prefix)
+  if (exists) {
+    deleted += await client.del(prefix)
+  }
+  return deleted
+}
+
 export function formatTTL(ttl: number): string {
   if (ttl === -1) return "none"
   if (ttl === -2) return "expired"

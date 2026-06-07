@@ -3,6 +3,9 @@
 ## Unreleased
 
 ### Added
+- `D` keybind to delete keys/namespaces with confirmation dialog (explorer + connections)
+- Reusable `ConfirmDialog` component
+- `deleteKey` and `deleteNamespace` functions using SCAN-based deletion
 - 3-column Miller columns explorer layout (parent / current / preview)
 - Value preview in right column shows key type, TTL, and data
 - Inspector preserves explorer position — going back restores focus

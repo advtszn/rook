@@ -3,6 +3,7 @@ import { useState, useCallback } from "react"
 import type { Connection, Screen } from "../types.ts"
 import { loadConfig, deleteConnection as removeConnection } from "../lib/config.ts"
 import { AddConnectionModal } from "../components/add-connection-modal.tsx"
+import { ConfirmDialog } from "../components/confirm-dialog.tsx"
 
 interface Props {
   onNavigate: (screen: Screen) => void
@@ -14,6 +15,7 @@ export function ConnectionsScreen({ onNavigate }: Props) {
   const [connections, setConnections] = useState<Connection[]>(() => loadConfig().connections)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const refreshConnections = useCallback(() => {
@@ -21,7 +23,7 @@ export function ConnectionsScreen({ onNavigate }: Props) {
   }, [])
 
   useKeyboard((key) => {
-    if (showAddModal) return
+    if (showAddModal || showDeleteConfirm) return
 
     if (key.name === "q") {
       renderer.destroy()
@@ -39,11 +41,9 @@ export function ConnectionsScreen({ onNavigate }: Props) {
       }
     } else if (key.name === "a") {
       setShowAddModal(true)
-    } else if (key.name === "d") {
+    } else if (key.name === "d" && key.shift) {
       if (connections.length > 0 && connections[selectedIndex]) {
-        removeConnection(connections[selectedIndex].name)
-        refreshConnections()
-        setSelectedIndex((i: number) => Math.max(0, Math.min(i, connections.length - 2)))
+        setShowDeleteConfirm(true)
       }
     } else if (key.name === "g") {
       setSelectedIndex(0)
@@ -59,6 +59,20 @@ export function ConnectionsScreen({ onNavigate }: Props) {
 
   const handleCancel = useCallback(() => {
     setShowAddModal(false)
+  }, [])
+
+  const handleDeleteConfirm = useCallback(() => {
+    const conn = connections[selectedIndex]
+    if (conn) {
+      removeConnection(conn.name)
+      refreshConnections()
+      setSelectedIndex((i: number) => Math.max(0, Math.min(i, connections.length - 2)))
+    }
+    setShowDeleteConfirm(false)
+  }, [connections, selectedIndex, refreshConnections])
+
+  const handleDeleteCancel = useCallback(() => {
+    setShowDeleteConfirm(false)
   }, [])
 
   return (
@@ -105,7 +119,7 @@ export function ConnectionsScreen({ onNavigate }: Props) {
       >
         <text fg="#565f89">
           <span fg="#7aa2f7">a</span> Add{"  "}
-          <span fg="#7aa2f7">d</span> Delete{"  "}
+          <span fg="#7aa2f7">D</span> Delete{"  "}
           <span fg="#7aa2f7">Enter</span> Connect{"  "}
           <span fg="#7aa2f7">q</span> Quit
         </text>
@@ -113,6 +127,14 @@ export function ConnectionsScreen({ onNavigate }: Props) {
 
       {showAddModal && (
         <AddConnectionModal onSave={handleSave} onCancel={handleCancel} />
+      )}
+
+      {showDeleteConfirm && connections[selectedIndex] && (
+        <ConfirmDialog
+          message={`Delete connection "${connections[selectedIndex].name}"?`}
+          onConfirm={handleDeleteConfirm}
+          onCancel={handleDeleteCancel}
+        />
       )}
     </box>
   )

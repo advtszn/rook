@@ -1,8 +1,9 @@
 import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react"
 import { useState, useEffect, useCallback, useRef } from "react"
 import type { Connection, Screen, TreeNode, ExplorerState } from "../types.ts"
-import { connectToRedis, scanKeys, disconnectRedis, getClient, getKeyValue, getKeyTTL, formatTTL } from "../lib/redis.ts"
+import { connectToRedis, scanKeys, disconnectRedis, getClient, getKeyValue, getKeyTTL, formatTTL, deleteKey, deleteNamespace } from "../lib/redis.ts"
 import { buildTree, getNodesAtPath, filterTree } from "../lib/tree.ts"
+import { ConfirmDialog } from "../components/confirm-dialog.tsx"
 
 interface Props {
   connection: Connection
@@ -44,6 +45,8 @@ export function ExplorerScreen({ connection, restoreState, onNavigate }: Props) 
   const [leftScroll, setLeftScroll] = useState(0)
   const [midScroll, setMidScroll] = useState(0)
   const [rightScroll, setRightScroll] = useState(0)
+  // delete confirmation
+  const [confirmDelete, setConfirmDelete] = useState<{ key: string; isNamespace: boolean } | null>(null)
   // preview for leaf nodes
   const [preview, setPreview] = useState<Preview | null>(null)
   const [previewKey, setPreviewKey] = useState<string | null>(null)
@@ -145,6 +148,26 @@ export function ExplorerScreen({ connection, restoreState, onNavigate }: Props) 
     }
   }, [safeSelected, selectedNode, path, connection, onNavigate])
 
+  const refreshTree = useCallback(async () => {
+    const client = getClient()
+    if (!client) return
+    const keys = await scanKeys(client)
+    setTree(buildTree(keys))
+  }, [])
+
+  const handleDeleteConfirm = useCallback(async () => {
+    const client = getClient()
+    if (!client || !confirmDelete) return
+    if (confirmDelete.isNamespace) {
+      await deleteNamespace(client, confirmDelete.key)
+    } else {
+      await deleteKey(client, confirmDelete.key)
+    }
+    setConfirmDelete(null)
+    await refreshTree()
+    setSelectedIndex((i: number) => clamp(i, 0, Math.max(0, currentNodes.length - 2)))
+  }, [confirmDelete, currentNodes.length, refreshTree])
+
   const navigateLeft = useCallback(() => {
     if (path.length === 0) return
     const prevIdx = path[path.length - 1]!
@@ -153,6 +176,8 @@ export function ExplorerScreen({ connection, restoreState, onNavigate }: Props) 
   }, [path, onNavigate])
 
   useKeyboard((key) => {
+    if (confirmDelete) return
+
     if (searchMode) {
       if (key.name === "escape") {
         setSearchMode(false)
@@ -201,6 +226,11 @@ export function ExplorerScreen({ connection, restoreState, onNavigate }: Props) 
       setSearchQuery("")
       setPath([])
       setSelectedIndex(0)
+    } else if (key.name === "d" && key.shift) {
+      if (selectedNode) {
+        const isNamespace = selectedNode.children.length > 0 && !selectedNode.isLeaf
+        setConfirmDelete({ key: selectedNode.fullKey, isNamespace })
+      }
     }
   })
 
@@ -312,6 +342,7 @@ export function ExplorerScreen({ connection, restoreState, onNavigate }: Props) 
             <span fg="#7aa2f7">j</span>/<span fg="#7aa2f7">k</span> Select{"  "}
             <span fg="#7aa2f7">/</span> Search{"  "}
             <span fg="#7aa2f7">Enter</span> Open{"  "}
+            <span fg="#7aa2f7">D</span> Delete{"  "}
             <span fg="#7aa2f7">q</span> Back
           </text>
         )}
@@ -321,6 +352,17 @@ export function ExplorerScreen({ connection, restoreState, onNavigate }: Props) 
       <box width="100%" height={1} backgroundColor="#1a1b26" paddingX={1}>
         <text fg="#565f89">{pathStr}</text>
       </box>
+
+      {confirmDelete && (
+        <ConfirmDialog
+          message={confirmDelete.isNamespace
+            ? `Delete all keys under "${confirmDelete.key}:*"?`
+            : `Delete key "${confirmDelete.key}"?`}
+          detail={confirmDelete.isNamespace ? "This will delete all keys in this namespace." : undefined}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
     </box>
   )
 }
