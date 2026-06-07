@@ -20,6 +20,7 @@ function App() {
       return (
         <ExplorerScreen
           connection={screen.connection}
+          restoreState={screen.restoreState}
           onNavigate={handleNavigate}
         />
       )
@@ -28,6 +29,7 @@ function App() {
         <InspectorScreen
           connection={screen.connection}
           redisKey={screen.redisKey}
+          explorerState={screen.explorerState}
           onNavigate={handleNavigate}
         />
       )

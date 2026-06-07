@@ -17,7 +17,12 @@ export interface TreeNode {
   isLeaf: boolean
 }
 
+export interface ExplorerState {
+  path: number[]
+  selectedIndex: number
+}
+
 export type Screen =
   | { type: "connections" }
-  | { type: "explorer"; connection: Connection }
-  | { type: "inspector"; connection: Connection; redisKey: string }
+  | { type: "explorer"; connection: Connection; restoreState?: ExplorerState }
+  | { type: "inspector"; connection: Connection; redisKey: string; explorerState: ExplorerState }

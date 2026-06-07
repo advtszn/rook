@@ -49,32 +49,31 @@ function sortTree(nodes: TreeNode[]) {
   }
 }
 
-export interface FlatNode {
-  node: TreeNode
-  depth: number
-  expanded: boolean
-  hasChildren: boolean
-}
-
-export function flattenTree(
-  nodes: TreeNode[],
-  expandedKeys: Set<string>,
-  depth = 0,
-): FlatNode[] {
-  const result: FlatNode[] = []
-
-  for (const node of nodes) {
-    const hasChildren = node.children.length > 0
-    const expanded = expandedKeys.has(node.fullKey)
-
-    result.push({ node, depth, expanded, hasChildren })
-
-    if (hasChildren && expanded) {
-      result.push(...flattenTree(node.children, expandedKeys, depth + 1))
-    }
+export function getNodesAtPath(
+  root: TreeNode[],
+  path: number[],
+): { parent: TreeNode[] | null; current: TreeNode[]; selected: TreeNode | null } {
+  if (path.length === 0) {
+    return { parent: null, current: root, selected: null }
   }
 
-  return result
+  let parent: TreeNode[] | null = null
+  let current = root
+
+  for (let i = 0; i < path.length; i++) {
+    const idx = path[i]!
+    const node = current[idx]
+    if (!node) {
+      return { parent, current, selected: null }
+    }
+    if (i === path.length - 1) {
+      return { parent: current, current: node.children, selected: node }
+    }
+    parent = current
+    current = node.children
+  }
+
+  return { parent, current, selected: null }
 }
 
 export function filterTree(nodes: TreeNode[], query: string): TreeNode[] {

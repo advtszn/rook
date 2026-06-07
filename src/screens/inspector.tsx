@@ -1,15 +1,16 @@
 import { useKeyboard, useTerminalDimensions } from "@opentui/react"
 import { useState, useEffect } from "react"
-import type { Connection, Screen } from "../types.ts"
+import type { Connection, ExplorerState, Screen } from "../types.ts"
 import { getClient, getKeyValue, getKeyTTL, formatTTL } from "../lib/redis.ts"
 
 interface Props {
   connection: Connection
   redisKey: string
+  explorerState: ExplorerState
   onNavigate: (screen: Screen) => void
 }
 
-export function InspectorScreen({ connection, redisKey, onNavigate }: Props) {
+export function InspectorScreen({ connection, redisKey, explorerState, onNavigate }: Props) {
   const { height } = useTerminalDimensions()
   const [type, setType] = useState<string>("")
   const [value, setValue] = useState<string>("")
@@ -56,8 +57,8 @@ export function InspectorScreen({ connection, redisKey, onNavigate }: Props) {
   }, [redisKey])
 
   useKeyboard((key) => {
-    if (key.name === "q" || key.name === "escape") {
-      onNavigate({ type: "explorer", connection })
+    if (key.name === "q" || key.name === "escape" || key.name === "h" || key.name === "left") {
+      onNavigate({ type: "explorer", connection, restoreState: explorerState })
       return
     }
     if (key.name === "j" || key.name === "down") {
