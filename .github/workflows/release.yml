@@ -1,0 +1,134 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: bun-linux-x64
+            artifact: rook-linux-x64
+          - os: ubuntu-latest
+            target: bun-linux-arm64
+            artifact: rook-linux-arm64
+          - os: macos-latest
+            target: bun-darwin-arm64
+            artifact: rook-darwin-arm64
+          - os: macos-13
+            target: bun-darwin-x64
+            artifact: rook-darwin-x64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install
+        working-directory: packages/cli
+
+      - run: bun build --compile --target=${{ matrix.target }} src/index.tsx --outfile ${{ matrix.artifact }}
+        working-directory: packages/cli
+
+      - run: tar -czf ${{ matrix.artifact }}.tar.gz ${{ matrix.artifact }}
+        working-directory: packages/cli
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: packages/cli/${{ matrix.artifact }}.tar.gz
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: artifacts/*.tar.gz
+
+      - name: Update Homebrew tap
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+
+          darwin_arm64_sha=$(sha256sum artifacts/rook-darwin-arm64.tar.gz | cut -d' ' -f1)
+          darwin_x64_sha=$(sha256sum artifacts/rook-darwin-x64.tar.gz | cut -d' ' -f1)
+          linux_arm64_sha=$(sha256sum artifacts/rook-linux-arm64.tar.gz | cut -d' ' -f1)
+          linux_x64_sha=$(sha256sum artifacts/rook-linux-x64.tar.gz | cut -d' ' -f1)
+
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/advtszn/homebrew-rook.git" tap
+          mkdir -p tap/Formula
+
+          cat > tap/Formula/rook.rb << FORMULA
+          class Rook < Formula
+            desc "A terminal UI for exploring Redis"
+            homepage "https://github.com/advtszn/rook"
+            version "${version}"
+            license "MIT"
+
+            on_macos do
+              on_arm do
+                url "https://github.com/advtszn/rook/releases/download/v#{version}/rook-darwin-arm64.tar.gz"
+                sha256 "${darwin_arm64_sha}"
+              end
+
+              on_intel do
+                url "https://github.com/advtszn/rook/releases/download/v#{version}/rook-darwin-x64.tar.gz"
+                sha256 "${darwin_x64_sha}"
+              end
+            end
+
+            on_linux do
+              on_arm do
+                url "https://github.com/advtszn/rook/releases/download/v#{version}/rook-linux-arm64.tar.gz"
+                sha256 "${linux_arm64_sha}"
+              end
+
+              on_intel do
+                url "https://github.com/advtszn/rook/releases/download/v#{version}/rook-linux-x64.tar.gz"
+                sha256 "${linux_x64_sha}"
+              end
+            end
+
+            def install
+              binary = Dir.glob("rook-*").first || "rook"
+              bin.install binary => "rook"
+            end
+
+            test do
+              assert_match version.to_s, shell_output("#{bin}/rook --version", 2)
+            end
+          end
+          FORMULA
+
+          sed -i 's/^          //' tap/Formula/rook.rb
+
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/rook.rb
+          git diff --cached --quiet && exit 0
+          git commit -m "rook ${version}"
+          git push

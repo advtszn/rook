@@ -1,0 +1,6 @@
+pre-commit:
+  commands:
+    check:
+      glob: "*"
+      run: bunx @biomejs/biome check --write --files-ignore-unknown=true {all_files}
+      stage_fixed: true
