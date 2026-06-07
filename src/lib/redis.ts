@@ -10,11 +10,15 @@ export function connectToRedis(conn: Connection): Redis {
   currentClient = new Redis({
     host: conn.host,
     port: conn.port,
+    username: conn.username || "default",
     password: conn.password ?? undefined,
     db: conn.database,
+    tls: conn.tls ? {} : undefined,
+    connectTimeout: 10000,
     lazyConnect: true,
-    retryStrategy: () => null,
+    retryStrategy: (times) => times > 3 ? null : Math.min(times * 200, 2000),
   })
+  currentClient.on("error", () => {})
   return currentClient
 }
 

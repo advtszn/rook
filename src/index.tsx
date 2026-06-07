@@ -1,6 +1,6 @@
 import { createCliRenderer } from "@opentui/core"
 import { createRoot } from "@opentui/react"
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import type { Screen } from "./types.ts"
 import { ConnectionsScreen } from "./screens/connections.tsx"
 import { ExplorerScreen } from "./screens/explorer.tsx"
@@ -8,8 +8,10 @@ import { InspectorScreen } from "./screens/inspector.tsx"
 
 function App() {
   const [screen, setScreen] = useState<Screen>({ type: "connections" })
+  const sessionKey = useRef(0)
 
   const handleNavigate = useCallback((next: Screen) => {
+    if (next.type === "explorer") sessionKey.current++
     setScreen(next)
   }, [])
 
@@ -19,6 +21,7 @@ function App() {
     case "explorer":
       return (
         <ExplorerScreen
+          key={sessionKey.current}
           connection={screen.connection}
           restoreState={screen.restoreState}
           onNavigate={handleNavigate}

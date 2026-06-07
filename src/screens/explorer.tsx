@@ -173,7 +173,7 @@ export function ExplorerScreen({
         }
       } catch (e: any) {
         if (!cancelled) {
-          setError(e.message ?? "Connection failed");
+          setError(`${e.message ?? "Connection failed"} [${e.code ?? ""}]`);
           setLoading(false);
         }
       }
@@ -260,6 +260,22 @@ export function ExplorerScreen({
         setSearchMode(false);
         return;
       }
+      if (key.name === "backspace" && (key.meta || key.option)) {
+        setSearchQuery((q: string) => {
+          const trimmed = q.trimEnd();
+          const lastSpace = trimmed.lastIndexOf(" ");
+          return lastSpace >= 0 ? q.slice(0, lastSpace) : "";
+        });
+        setSelectedIndex(0);
+        setPath([]);
+        return;
+      }
+      if (key.name === "backspace" && key.ctrl) {
+        setSearchQuery("");
+        setSelectedIndex(0);
+        setPath([]);
+        return;
+      }
       if (key.name === "backspace") {
         setSearchQuery((q: string) => q.slice(0, -1));
         setSelectedIndex(0);
@@ -332,10 +348,11 @@ export function ExplorerScreen({
         <text>{""}</text>
         <text fg={theme.textDim}>Host: {connection.host}</text>
         <text fg={theme.textDim}>Port: {connection.port}</text>
+        <text fg={theme.textDim}>TLS:  {connection.tls ? "on" : "off"}</text>
         <text>{""}</text>
         <text fg={theme.textDim}>{error}</text>
         <text>{""}</text>
-        <text fg={theme.textDim}>Press any key to return.</text>
+        <text fg={theme.textDim}>Press q to go back.</text>
       </box>
     );
   }
@@ -374,7 +391,12 @@ export function ExplorerScreen({
         flexDirection="row"
         justifyContent="space-between"
       >
-        <text fg={theme.accent}>{connection.name} <span fg={theme.textDim}>({connection.host}:{connection.port}/{connection.database})</span></text>
+        <text fg={theme.accent}>
+          {connection.name}{" "}
+          <span fg={theme.textDim}>
+            ({connection.host}:{connection.port}/{connection.database})
+          </span>
+        </text>
         {autoRefreshInterval !== null && (
           <text fg={theme.warning}>
             {"  "}⚠ Auto-refresh enabled — may increase Redis read overhead
@@ -456,12 +478,14 @@ export function ExplorerScreen({
                 ↻ {autoRefreshInterval}s{"  "}
               </span>
             )}
-            <span fg={theme.accent}>h</span>/<span fg={theme.accent}>l</span> Navigate
+            <span fg={theme.accent}>h</span>/<span fg={theme.accent}>l</span>{" "}
+            Navigate
             {"  "}
-            <span fg={theme.accent}>j</span>/<span fg={theme.accent}>k</span> Select{"  "}
+            <span fg={theme.accent}>j</span>/<span fg={theme.accent}>k</span>{" "}
+            Select{"  "}
             <span fg={theme.accent}>/</span> Search{"  "}
             <span fg={theme.accent}>r</span> Refresh{"  "}
-            <span fg={theme.accent}>R</span> Auto{"  "}
+            <span fg={theme.accent}>R</span> Auto Refresh{"  "}
             <span fg={theme.accent}>y</span> Copy{"  "}
             <span fg={theme.accent}>D</span> Delete{"  "}
             <span fg={theme.accent}>q</span> Back
@@ -475,12 +499,7 @@ export function ExplorerScreen({
       </box>
 
       {copied && (
-        <box
-          position="absolute"
-          top={0}
-          right={2}
-          padding={1}
-        >
+        <box position="absolute" top={0} right={2} padding={1}>
           <box
             width={24}
             height={3}
@@ -598,7 +617,10 @@ function ValuePreview({
   const lines = preview.value.split("\n");
   const headerCount = 3;
   const allLines = lines;
-  const visible = allLines.slice(Math.max(0, scrollOffset - headerCount), Math.max(0, scrollOffset - headerCount) + maxItems);
+  const visible = allLines.slice(
+    Math.max(0, scrollOffset - headerCount),
+    Math.max(0, scrollOffset - headerCount) + maxItems,
+  );
 
   return (
     <box
@@ -616,7 +638,8 @@ function ValuePreview({
           )}
           {scrollOffset <= 1 && (
             <text fg={theme.textDim}>
-              {"  "}TTL:{"  "}<span fg={theme.warning}>{preview.ttl}</span>
+              {"  "}TTL:{"  "}
+              <span fg={theme.warning}>{preview.ttl}</span>
             </text>
           )}
           {scrollOffset <= 2 && <text>{""}</text>}

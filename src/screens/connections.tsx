@@ -17,6 +17,7 @@ export function ConnectionsScreen({ onNavigate }: Props) {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showInfo, setShowInfo] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const refreshConnections = useCallback(() => {
@@ -24,7 +25,7 @@ export function ConnectionsScreen({ onNavigate }: Props) {
   }, [])
 
   useKeyboard((key) => {
-    if (showAddModal || showDeleteConfirm) return
+    if (showAddModal || showDeleteConfirm || showInfo) return
 
     if (key.name === "q") {
       renderer.destroy()
@@ -45,6 +46,10 @@ export function ConnectionsScreen({ onNavigate }: Props) {
     } else if (key.name === "d" && key.shift) {
       if (connections.length > 0 && connections[selectedIndex]) {
         setShowDeleteConfirm(true)
+      }
+    } else if (key.name === "i") {
+      if (connections.length > 0 && connections[selectedIndex]) {
+        setShowInfo(true)
       }
     } else if (key.name === "g") {
       setSelectedIndex(0)
@@ -120,6 +125,7 @@ export function ConnectionsScreen({ onNavigate }: Props) {
       >
         <text fg={theme.textDim}>
           <span fg={theme.accent}>a</span> Add{"  "}
+          <span fg={theme.accent}>i</span> Info{"  "}
           <span fg={theme.accent}>D</span> Delete{"  "}
           <span fg={theme.accent}>Enter</span> Connect{"  "}
           <span fg={theme.accent}>q</span> Quit
@@ -130,6 +136,23 @@ export function ConnectionsScreen({ onNavigate }: Props) {
         <AddConnectionModal onSave={handleSave} onCancel={handleCancel} />
       )}
 
+      {showInfo && connections[selectedIndex] && (
+        <box
+          position="absolute"
+          left={0}
+          top={0}
+          width="100%"
+          height="100%"
+          justifyContent="center"
+          alignItems="center"
+        >
+          <ConnectionInfo
+            connection={connections[selectedIndex]}
+            onClose={() => setShowInfo(false)}
+          />
+        </box>
+      )}
+
       {showDeleteConfirm && connections[selectedIndex] && (
         <ConfirmDialog
           message={`Delete connection "${connections[selectedIndex].name}"?`}
@@ -137,6 +160,62 @@ export function ConnectionsScreen({ onNavigate }: Props) {
           onCancel={handleDeleteCancel}
         />
       )}
+    </box>
+  )
+}
+
+function ConnectionInfo({ connection, onClose }: { connection: Connection; onClose: () => void }) {
+  useKeyboard((key) => {
+    if (key.name === "escape" || key.name === "i" || key.name === "q") {
+      onClose()
+    }
+  })
+
+  return (
+    <box
+      flexDirection="column"
+      width={50}
+      style={{ borderStyle: "rounded", borderColor: theme.accent }}
+      padding={1}
+      backgroundColor={theme.bg}
+      gap={1}
+    >
+      <text fg={theme.accent}>{connection.name}</text>
+      <text>{""}</text>
+      <box flexDirection="row" height={1}>
+        <text fg={theme.textDim}>Host{"      "}</text>
+        <text fg={theme.text}>{connection.host}</text>
+      </box>
+      <box flexDirection="row" height={1}>
+        <text fg={theme.textDim}>Port{"      "}</text>
+        <text fg={theme.text}>{connection.port}</text>
+      </box>
+      <box flexDirection="row" height={1}>
+        <text fg={theme.textDim}>Username{"  "}</text>
+        <text fg={theme.text}>{connection.username || "default"}</text>
+      </box>
+      <box flexDirection="row" height={1}>
+        <text fg={theme.textDim}>Password{"  "}</text>
+        <text fg={theme.text}>{connection.password ? "••••••••" : "none"}</text>
+      </box>
+      <box flexDirection="row" height={1}>
+        <text fg={theme.textDim}>Database{"  "}</text>
+        <text fg={theme.text}>{connection.database}</text>
+      </box>
+      <box flexDirection="row" height={1}>
+        <text fg={theme.textDim}>TLS{"       "}</text>
+        <text fg={connection.tls ? theme.success : theme.textMuted}>{connection.tls ? "Enabled" : "Disabled"}</text>
+      </box>
+      {connection.autoRefreshInterval && (
+        <box flexDirection="row" height={1}>
+          <text fg={theme.textDim}>Auto-Ref{"  "}</text>
+          <text fg={theme.warning}>{connection.autoRefreshInterval}s</text>
+        </box>
+      )}
+      <text>{""}</text>
+      <text fg={theme.textDim}>
+        <span fg={theme.accent}>Esc</span> Close
+      </text>
     </box>
   )
 }
