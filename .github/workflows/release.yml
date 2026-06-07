@@ -20,6 +20,9 @@ jobs:
           - os: macos-latest
             target: bun-darwin-arm64
             artifact: rook-darwin-arm64
+          - os: windows-latest
+            target: bun-windows-x64
+            artifact: rook-windows-x64
 
     runs-on: ${{ matrix.os }}
 
@@ -32,16 +35,26 @@ jobs:
 
       - run: bun install
 
-      - run: bun build --compile --target=${{ matrix.target }} src/index.tsx --outfile ${{ matrix.artifact }}
+      - name: Build binary
+        run: bun build --compile --target=${{ matrix.target }} src/index.tsx --outfile ${{ matrix.artifact }}
         working-directory: packages/cli
 
-      - run: tar -czf ${{ matrix.artifact }}.tar.gz ${{ matrix.artifact }}
+      - name: Archive (unix)
+        if: runner.os != 'Windows'
+        run: tar -czf ${{ matrix.artifact }}.tar.gz ${{ matrix.artifact }}
+        working-directory: packages/cli
+
+      - name: Archive (windows)
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path ${{ matrix.artifact }}.exe -DestinationPath ${{ matrix.artifact }}.zip
         working-directory: packages/cli
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: packages/cli/${{ matrix.artifact }}.tar.gz
+          path: |
+            packages/cli/${{ matrix.artifact }}.tar.gz
+            packages/cli/${{ matrix.artifact }}.zip
 
   release:
     needs: build
@@ -59,7 +72,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: artifacts/*.tar.gz
+          files: |
+            artifacts/*.tar.gz
+            artifacts/*.zip
 
       - name: Update Homebrew tap
         env:
