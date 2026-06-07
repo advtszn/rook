@@ -15,9 +15,10 @@ function clamp(val: number, min: number, max: number) {
 }
 
 function scrollForIndex(selected: number, viewHeight: number, currentScroll: number): number {
+  if (selected < 0) return 0
   if (selected < currentScroll) return selected
   if (selected >= currentScroll + viewHeight) return selected - viewHeight + 1
-  return currentScroll
+  return Math.max(0, currentScroll)
 }
 
 interface Preview {
@@ -47,7 +48,7 @@ export function ExplorerScreen({ connection, restoreState, onNavigate }: Props) 
   const [preview, setPreview] = useState<Preview | null>(null)
   const [previewKey, setPreviewKey] = useState<string | null>(null)
 
-  const colHeight = height - 4
+  const colHeight = height - 5
 
   const displayTree = searchQuery ? filterTree(tree, searchQuery) : tree
 
@@ -258,7 +259,7 @@ export function ExplorerScreen({ connection, restoreState, onNavigate }: Props) 
             highlightIndex={parentIndex}
             selectedIndex={-1}
             width={colWidth}
-            height={colHeight}
+            maxItems={colHeight}
             scrollOffset={leftScroll}
             dimmed
             borderColor="#292e42"
@@ -271,7 +272,7 @@ export function ExplorerScreen({ connection, restoreState, onNavigate }: Props) 
           highlightIndex={-1}
           selectedIndex={safeSelected}
           width={colWidth}
-          height={colHeight}
+          maxItems={colHeight}
           scrollOffset={midScroll}
           dimmed={false}
           borderColor="#3b4261"
@@ -282,7 +283,7 @@ export function ExplorerScreen({ connection, restoreState, onNavigate }: Props) 
           <ValuePreview
             preview={preview}
             width={colWidth}
-            height={colHeight}
+            maxItems={colHeight}
             scrollOffset={rightScroll}
             borderColor="#292e42"
           />
@@ -292,7 +293,7 @@ export function ExplorerScreen({ connection, restoreState, onNavigate }: Props) 
             highlightIndex={-1}
             selectedIndex={-1}
             width={colWidth}
-            height={colHeight}
+            maxItems={colHeight}
             scrollOffset={rightScroll}
             dimmed
             borderColor="#292e42"
@@ -329,21 +330,24 @@ interface ColumnProps {
   highlightIndex: number
   selectedIndex: number
   width: number
-  height: number
+  maxItems: number
   scrollOffset: number
   dimmed: boolean
   borderColor: string
 }
 
-function Column({ nodes, highlightIndex, selectedIndex, width, height, scrollOffset, dimmed, borderColor }: ColumnProps) {
-  const visible = nodes.slice(scrollOffset, scrollOffset + height)
+function Column({ nodes, highlightIndex, selectedIndex, width, maxItems, scrollOffset, dimmed, borderColor }: ColumnProps) {
+  const visible = nodes.slice(scrollOffset, scrollOffset + maxItems)
 
   return (
     <box
       width={width}
-      height={height + 2}
+      flexGrow={1}
+      flexShrink={1}
       style={{ borderStyle: "single", borderColor }}
       flexDirection="column"
+      justifyContent="flex-start"
+      alignItems="flex-start"
     >
       {visible.length === 0 ? (
         <text fg="#3b4261">{"  "}(empty)</text>
@@ -366,7 +370,7 @@ function Column({ nodes, highlightIndex, selectedIndex, width, height, scrollOff
           }
 
           return (
-            <text key={node.fullKey} fg={fg} bg={bg}>
+            <text key={`${node.fullKey}-${actualIdx}`} fg={fg} bg={bg}>
               {isSelected ? " › " : "   "}{node.key}{suffix}
             </text>
           )
@@ -379,12 +383,12 @@ function Column({ nodes, highlightIndex, selectedIndex, width, height, scrollOff
 interface ValuePreviewProps {
   preview: Preview
   width: number
-  height: number
+  maxItems: number
   scrollOffset: number
   borderColor: string
 }
 
-function ValuePreview({ preview, width, height, scrollOffset, borderColor }: ValuePreviewProps) {
+function ValuePreview({ preview, width, maxItems, scrollOffset, borderColor }: ValuePreviewProps) {
   const lines = preview.value.split("\n")
   const header = [
     `Type: ${preview.type}`,
@@ -392,12 +396,12 @@ function ValuePreview({ preview, width, height, scrollOffset, borderColor }: Val
     "",
   ]
   const allLines = [...header, ...lines]
-  const visible = allLines.slice(scrollOffset, scrollOffset + height)
+  const visible = allLines.slice(scrollOffset, scrollOffset + maxItems)
 
   return (
     <box
       width={width}
-      height={height + 2}
+      flexGrow={1}
       style={{ borderStyle: "single", borderColor }}
       flexDirection="column"
     >

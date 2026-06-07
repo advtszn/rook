@@ -38,5 +38,7 @@ function App() {
 
 const renderer = await createCliRenderer({
   exitOnCtrlC: true,
+  useMouse: false,
+  enableMouseMovement: false,
 })
 createRoot(renderer).render(<App />)
