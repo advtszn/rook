@@ -1,16 +1,40 @@
-import { createCliRenderer, TextAttributes } from "@opentui/core";
-import { createRoot } from "@opentui/react";
+import { createCliRenderer } from "@opentui/core"
+import { createRoot } from "@opentui/react"
+import { useState, useCallback } from "react"
+import type { Screen } from "./types.ts"
+import { ConnectionsScreen } from "./screens/connections.tsx"
+import { ExplorerScreen } from "./screens/explorer.tsx"
+import { InspectorScreen } from "./screens/inspector.tsx"
 
 function App() {
-  return (
-    <box alignItems="center" justifyContent="center" flexGrow={1}>
-      <box justifyContent="center" alignItems="flex-end">
-        <ascii-font font="tiny" text="OpenTUI" />
-        <text attributes={TextAttributes.DIM}>What will you build?</text>
-      </box>
-    </box>
-  );
+  const [screen, setScreen] = useState<Screen>({ type: "connections" })
+
+  const handleNavigate = useCallback((next: Screen) => {
+    setScreen(next)
+  }, [])
+
+  switch (screen.type) {
+    case "connections":
+      return <ConnectionsScreen onNavigate={handleNavigate} />
+    case "explorer":
+      return (
+        <ExplorerScreen
+          connection={screen.connection}
+          onNavigate={handleNavigate}
+        />
+      )
+    case "inspector":
+      return (
+        <InspectorScreen
+          connection={screen.connection}
+          redisKey={screen.redisKey}
+          onNavigate={handleNavigate}
+        />
+      )
+  }
 }
 
-const renderer = await createCliRenderer();
-createRoot(renderer).render(<App />);
+const renderer = await createCliRenderer({
+  exitOnCtrlC: true,
+})
+createRoot(renderer).render(<App />)
