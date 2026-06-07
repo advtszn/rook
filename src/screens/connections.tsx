@@ -4,6 +4,7 @@ import type { Connection, Screen } from "../types.ts"
 import { loadConfig, deleteConnection as removeConnection } from "../lib/config.ts"
 import { AddConnectionModal } from "../components/add-connection-modal.tsx"
 import { ConfirmDialog } from "../components/confirm-dialog.tsx"
+import { theme } from "../lib/theme.ts"
 
 interface Props {
   onNavigate: (screen: Screen) => void
@@ -78,24 +79,24 @@ export function ConnectionsScreen({ onNavigate }: Props) {
   return (
     <box flexDirection="column" width="100%" height="100%">
       <box flexDirection="column" padding={1} flexGrow={1}>
-        <text fg="#7aa2f7">
+        <text fg={theme.accent}>
           {"  "}ROOK
         </text>
         <text>{""}</text>
-        <text fg="#565f89">{"  "}Connections</text>
+        <text fg={theme.textDim}>{"  "}Connections</text>
         <text>{""}</text>
 
         {connections.length === 0 ? (
-          <text fg="#565f89">{"  "}No connections saved. Press 'a' to add one.</text>
+          <text fg={theme.textDim}>{"  "}No connections saved. Press 'a' to add one.</text>
         ) : (
           connections.map((conn: Connection, i: number) => (
             <text
               key={conn.name}
-              fg={i === selectedIndex ? "#c0caf5" : "#565f89"}
-              bg={i === selectedIndex ? "#283457" : undefined}
+              fg={i === selectedIndex ? theme.text : theme.textDim}
+              bg={i === selectedIndex ? theme.bgHighlight : undefined}
             >
               {"  "}{i === selectedIndex ? "› " : "  "}{conn.name}
-              <span fg="#565f89">
+              <span fg={theme.textDim}>
                 {" "}({conn.host}:{conn.port}/{conn.database})
               </span>
             </text>
@@ -104,7 +105,7 @@ export function ConnectionsScreen({ onNavigate }: Props) {
 
         {error && (
           <box marginTop={1}>
-            <text fg="#f7768e">{"  "}{error}</text>
+            <text fg={theme.error}>{"  "}{error}</text>
           </box>
         )}
       </box>
@@ -112,16 +113,16 @@ export function ConnectionsScreen({ onNavigate }: Props) {
       <box
         width="100%"
         height={1}
-        backgroundColor="#1a1b26"
+        backgroundColor={theme.bg}
         flexDirection="row"
         paddingX={1}
         gap={2}
       >
-        <text fg="#565f89">
-          <span fg="#7aa2f7">a</span> Add{"  "}
-          <span fg="#7aa2f7">D</span> Delete{"  "}
-          <span fg="#7aa2f7">Enter</span> Connect{"  "}
-          <span fg="#7aa2f7">q</span> Quit
+        <text fg={theme.textDim}>
+          <span fg={theme.accent}>a</span> Add{"  "}
+          <span fg={theme.accent}>D</span> Delete{"  "}
+          <span fg={theme.accent}>Enter</span> Connect{"  "}
+          <span fg={theme.accent}>q</span> Quit
         </text>
       </box>
 

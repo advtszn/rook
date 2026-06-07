@@ -18,6 +18,7 @@ import {
 } from "../lib/redis.ts";
 import { buildTree, getNodesAtPath, filterTree } from "../lib/tree.ts";
 import { updateConnection } from "../lib/config.ts";
+import { theme } from "../lib/theme.ts";
 import { ConfirmDialog } from "../components/confirm-dialog.tsx";
 
 interface Props {
@@ -327,14 +328,14 @@ export function ExplorerScreen({
   if (error) {
     return (
       <box flexDirection="column" width="100%" height="100%" padding={1}>
-        <text fg="#f7768e">Unable to connect</text>
+        <text fg={theme.error}>Unable to connect</text>
         <text>{""}</text>
-        <text fg="#565f89">Host: {connection.host}</text>
-        <text fg="#565f89">Port: {connection.port}</text>
+        <text fg={theme.textDim}>Host: {connection.host}</text>
+        <text fg={theme.textDim}>Port: {connection.port}</text>
         <text>{""}</text>
-        <text fg="#565f89">{error}</text>
+        <text fg={theme.textDim}>{error}</text>
         <text>{""}</text>
-        <text fg="#565f89">Press any key to return.</text>
+        <text fg={theme.textDim}>Press any key to return.</text>
       </box>
     );
   }
@@ -342,7 +343,7 @@ export function ExplorerScreen({
   if (loading) {
     return (
       <box flexDirection="column" width="100%" height="100%" padding={1}>
-        <text fg="#7aa2f7">Connecting to {connection.name}...</text>
+        <text fg={theme.accent}>Connecting to {connection.name}...</text>
       </box>
     );
   }
@@ -373,9 +374,9 @@ export function ExplorerScreen({
         flexDirection="row"
         justifyContent="space-between"
       >
-        <text fg="#7aa2f7">{connection.name}</text>
+        <text fg={theme.accent}>{connection.name} <span fg={theme.textDim}>({connection.host}:{connection.port}/{connection.database})</span></text>
         {autoRefreshInterval !== null && (
-          <text fg="#e0af68">
+          <text fg={theme.warning}>
             {"  "}⚠ Auto-refresh enabled — may increase Redis read overhead
           </text>
         )}
@@ -392,7 +393,7 @@ export function ExplorerScreen({
             maxItems={colHeight}
             scrollOffset={leftScroll}
             dimmed
-            borderColor="#292e42"
+            borderColor={theme.border}
           />
         )}
 
@@ -405,7 +406,7 @@ export function ExplorerScreen({
           maxItems={colHeight}
           scrollOffset={midScroll}
           dimmed={false}
-          borderColor="#3b4261"
+          borderColor={theme.borderActive}
         />
 
         {/* Right column: preview */}
@@ -415,7 +416,7 @@ export function ExplorerScreen({
             width={colWidth}
             maxItems={colHeight}
             scrollOffset={rightScroll}
-            borderColor="#292e42"
+            borderColor={theme.border}
           />
         ) : (
           <Column
@@ -426,7 +427,7 @@ export function ExplorerScreen({
             maxItems={colHeight}
             scrollOffset={rightScroll}
             dimmed
-            borderColor="#292e42"
+            borderColor={theme.border}
           />
         )}
       </box>
@@ -437,39 +438,39 @@ export function ExplorerScreen({
         height={1}
         flexDirection="row"
         justifyContent="space-between"
-        backgroundColor="#1a1b26"
+        backgroundColor={theme.bg}
         paddingX={1}
       >
         {searchMode ? (
-          <text fg="#c0caf5">/{searchQuery}▎</text>
+          <text fg={theme.text}>/{searchQuery}▎</text>
         ) : (
-          <text fg="#565f89">
+          <text fg={theme.textDim}>
             {searchQuery && (
-              <span fg="#787c99">
+              <span fg={theme.textMuted}>
                 /{searchQuery}
                 {"  "}
               </span>
             )}
             {autoRefreshInterval !== null && (
-              <span fg="#e0af68">
+              <span fg={theme.warning}>
                 ↻ {autoRefreshInterval}s{"  "}
               </span>
             )}
-            <span fg="#7aa2f7">h</span>/<span fg="#7aa2f7">l</span> Navigate
+            <span fg={theme.accent}>h</span>/<span fg={theme.accent}>l</span> Navigate
             {"  "}
-            <span fg="#7aa2f7">j</span>/<span fg="#7aa2f7">k</span> Select{"  "}
-            <span fg="#7aa2f7">/</span> Search{"  "}
-            <span fg="#7aa2f7">r</span> Refresh{"  "}
-            <span fg="#7aa2f7">R</span> Auto{"  "}
-            <span fg="#7aa2f7">y</span> Copy{"  "}
-            <span fg="#7aa2f7">D</span> Delete{"  "}
-            <span fg="#7aa2f7">q</span> Back
+            <span fg={theme.accent}>j</span>/<span fg={theme.accent}>k</span> Select{"  "}
+            <span fg={theme.accent}>/</span> Search{"  "}
+            <span fg={theme.accent}>r</span> Refresh{"  "}
+            <span fg={theme.accent}>R</span> Auto{"  "}
+            <span fg={theme.accent}>y</span> Copy{"  "}
+            <span fg={theme.accent}>D</span> Delete{"  "}
+            <span fg={theme.accent}>q</span> Back
           </text>
         )}
 
         {/* Path bar */}
-        <box height={1} backgroundColor="#1a1b26" paddingX={1}>
-          <text fg="#565f89">{pathStr}</text>
+        <box height={1} backgroundColor={theme.bg} paddingX={1}>
+          <text fg={theme.textDim}>{pathStr}</text>
         </box>
       </box>
 
@@ -483,12 +484,12 @@ export function ExplorerScreen({
           <box
             width={24}
             height={3}
-            backgroundColor="#1a1b26"
-            style={{ borderStyle: "rounded", borderColor: "#9ece6a" }}
+            backgroundColor={theme.bg}
+            style={{ borderStyle: "rounded", borderColor: theme.success }}
             justifyContent="center"
             alignItems="center"
           >
-            <text fg="#9ece6a">Copied to clipboard</text>
+            <text fg={theme.success}>Copied to clipboard</text>
           </box>
         </box>
       )}
@@ -547,7 +548,7 @@ function Column({
       alignItems="flex-start"
     >
       {visible.length === 0 ? (
-        <text fg="#3b4261">{"  "}(empty)</text>
+        <text fg={theme.borderActive}>{"  "}(empty)</text>
       ) : (
         visible.map((node: TreeNode, vi: number) => {
           const actualIdx = scrollOffset + vi;
@@ -556,14 +557,14 @@ function Column({
           const hasChildren = node.children.length > 0;
           const suffix = hasChildren ? "/" : "";
 
-          let fg = dimmed ? "#565f89" : "#787c99";
+          let fg: string = dimmed ? theme.textDim : theme.textMuted;
           let bg: string | undefined;
           if (isSelected) {
-            fg = "#c0caf5";
-            bg = "#283457";
+            fg = theme.text;
+            bg = theme.bgHighlight;
           } else if (isHighlighted) {
-            fg = "#7aa2f7";
-            bg = "#1f2335";
+            fg = theme.accent;
+            bg = theme.bgDark;
           }
 
           return (
@@ -595,9 +596,9 @@ function ValuePreview({
   borderColor,
 }: ValuePreviewProps) {
   const lines = preview.value.split("\n");
-  const header = [`Type: ${preview.type}`, `TTL:  ${preview.ttl}`, ""];
-  const allLines = [...header, ...lines];
-  const visible = allLines.slice(scrollOffset, scrollOffset + maxItems);
+  const headerCount = 3;
+  const allLines = lines;
+  const visible = allLines.slice(Math.max(0, scrollOffset - headerCount), Math.max(0, scrollOffset - headerCount) + maxItems);
 
   return (
     <box
@@ -606,11 +607,24 @@ function ValuePreview({
       style={{ borderStyle: "single", borderColor }}
       flexDirection="column"
     >
+      {scrollOffset < headerCount && (
+        <>
+          {scrollOffset <= 0 && (
+            <text fg={theme.textDim}>
+              {"  "}Type: <span fg={theme.info}>{preview.type}</span>
+            </text>
+          )}
+          {scrollOffset <= 1 && (
+            <text fg={theme.textDim}>
+              {"  "}TTL:{"  "}<span fg={theme.warning}>{preview.ttl}</span>
+            </text>
+          )}
+          {scrollOffset <= 2 && <text>{""}</text>}
+        </>
+      )}
       {visible.map((line: string, i: number) => {
-        const actualIdx = scrollOffset + i;
-        const isHeader = actualIdx < header.length;
         return (
-          <text key={actualIdx} fg={isHeader ? "#bb9af7" : "#787c99"}>
+          <text key={i} fg={theme.textMuted}>
             {"  "}
             {line}
           </text>

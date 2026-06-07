@@ -1,6 +1,7 @@
 import { useKeyboard } from "@opentui/react"
 import { useState, useCallback } from "react"
 import { addConnection, loadConfig } from "../lib/config.ts"
+import { theme } from "../lib/theme.ts"
 
 interface Props {
   onSave: () => void
@@ -125,23 +126,23 @@ export function AddConnectionModal({ onSave, onCancel }: Props) {
         width={50}
         style={{
           borderStyle: "rounded",
-          borderColor: "#7aa2f7",
+          borderColor: theme.accent,
         }}
         padding={1}
-        backgroundColor="#1a1b26"
+        backgroundColor={theme.bg}
         gap={1}
       >
-        <text fg="#7aa2f7">Add Connection</text>
+        <text fg={theme.accent}>Add Connection</text>
         <text>{""}</text>
 
         {FIELDS.map((field) => (
           <box key={field} flexDirection="row" height={1}>
-            <text fg="#565f89" style={{ width: 12 }}>
+            <text fg={theme.textDim} style={{ width: 12 }}>
               {LABELS[field]}:
             </text>
             <text
-              fg={focusedField === field ? "#c0caf5" : "#787c99"}
-              bg={focusedField === field ? "#283457" : undefined}
+              fg={focusedField === field ? theme.text : theme.textMuted}
+              bg={focusedField === field ? theme.bgHighlight : undefined}
             >
               {values[field] || (focusedField === field ? "▎" : "")}
               {focusedField === field && values[field] ? "▎" : ""}
@@ -150,14 +151,14 @@ export function AddConnectionModal({ onSave, onCancel }: Props) {
         ))}
 
         {error && (
-          <text fg="#f7768e">{error}</text>
+          <text fg={theme.error}>{error}</text>
         )}
 
         <text>{""}</text>
-        <text fg="#565f89">
-          <span fg="#7aa2f7">Tab</span>/<span fg="#7aa2f7">↑↓</span> Navigate{"  "}
-          <span fg="#7aa2f7">Enter</span> Save{"  "}
-          <span fg="#7aa2f7">Esc</span> Cancel
+        <text fg={theme.textDim}>
+          <span fg={theme.accent}>Tab</span>/<span fg={theme.accent}>↑↓</span> Navigate{"  "}
+          <span fg={theme.accent}>Enter</span> Save{"  "}
+          <span fg={theme.accent}>Esc</span> Cancel
         </text>
       </box>
     </box>

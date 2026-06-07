@@ -2,6 +2,7 @@ import { useKeyboard, useTerminalDimensions } from "@opentui/react"
 import { useState, useEffect } from "react"
 import type { Connection, ExplorerState, Screen } from "../types.ts"
 import { getClient, getKeyValue, getKeyTTL, formatTTL } from "../lib/redis.ts"
+import { theme } from "../lib/theme.ts"
 
 interface Props {
   connection: Connection
@@ -75,7 +76,7 @@ export function InspectorScreen({ connection, redisKey, explorerState, onNavigat
   if (loading) {
     return (
       <box flexDirection="column" width="100%" height="100%" padding={1}>
-        <text fg="#7aa2f7">Loading {redisKey}...</text>
+        <text fg={theme.accent}>Loading {redisKey}...</text>
       </box>
     )
   }
@@ -83,9 +84,9 @@ export function InspectorScreen({ connection, redisKey, explorerState, onNavigat
   if (error) {
     return (
       <box flexDirection="column" width="100%" height="100%" padding={1}>
-        <text fg="#f7768e">{error}</text>
+        <text fg={theme.error}>{error}</text>
         <text>{""}</text>
-        <text fg="#565f89">Press q to return.</text>
+        <text fg={theme.textDim}>Press q to return.</text>
       </box>
     )
   }
@@ -93,25 +94,25 @@ export function InspectorScreen({ connection, redisKey, explorerState, onNavigat
   return (
     <box flexDirection="column" width="100%" height="100%">
       <box flexDirection="column" padding={1} flexGrow={1}>
-        <text fg="#7aa2f7">{"  "}{redisKey}</text>
+        <text fg={theme.accent}>{"  "}{redisKey}</text>
         <text>{""}</text>
         <box flexDirection="row" gap={4} height={1} paddingX={2}>
-          <text fg="#565f89">
-            Type: <span fg="#bb9af7">{type}</span>
+          <text fg={theme.textDim}>
+            Type: <span fg={theme.info}>{type}</span>
           </text>
-          <text fg="#565f89">
-            TTL: <span fg="#e0af68">{ttl}</span>
+          <text fg={theme.textDim}>
+            TTL: <span fg={theme.warning}>{ttl}</span>
           </text>
         </box>
         <text>{""}</text>
-        <text fg="#565f89">{"  "}{"─".repeat(40)}</text>
+        <text fg={theme.textDim}>{"  "}{"─".repeat(40)}</text>
         <text>{""}</text>
 
         {(() => {
           const lines = tryParseJson(value) ?? valueLines
           const visible = lines.slice(scrollOffset, scrollOffset + visibleHeight)
           return visible.map((line: string, i: number) => (
-            <text key={scrollOffset + i} fg="#a9b1d6">
+            <text key={scrollOffset + i} fg={theme.textSecondary}>
               {"  "}{line}
             </text>
           ))
@@ -121,15 +122,15 @@ export function InspectorScreen({ connection, redisKey, explorerState, onNavigat
       <box
         width="100%"
         height={1}
-        backgroundColor="#1a1b26"
+        backgroundColor={theme.bg}
         flexDirection="row"
         paddingX={1}
       >
-        <text fg="#565f89">
-          <span fg="#7aa2f7">j</span>/<span fg="#7aa2f7">k</span> Scroll{"  "}
-          <span fg="#7aa2f7">q</span> Back
+        <text fg={theme.textDim}>
+          <span fg={theme.accent}>j</span>/<span fg={theme.accent}>k</span> Scroll{"  "}
+          <span fg={theme.accent}>q</span> Back
           {totalLines > visibleHeight && (
-            <span fg="#565f89">
+            <span fg={theme.textDim}>
               {"  "}[{scrollOffset + 1}-{Math.min(scrollOffset + visibleHeight, totalLines)}/{totalLines}]
             </span>
           )}

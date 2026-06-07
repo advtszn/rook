@@ -1,4 +1,5 @@
 import { useKeyboard } from "@opentui/react"
+import { theme } from "../lib/theme.ts"
 
 interface Props {
   message: string
@@ -31,18 +32,18 @@ export function ConfirmDialog({ message, detail, onConfirm, onCancel }: Props) {
         width={50}
         style={{
           borderStyle: "rounded",
-          borderColor: "#f7768e",
+          borderColor: theme.error,
         }}
         padding={1}
-        backgroundColor="#1a1b26"
+        backgroundColor={theme.bg}
         gap={1}
       >
-        <text fg="#f7768e">{message}</text>
-        {detail && <text fg="#565f89">{detail}</text>}
+        <text fg={theme.error}>{message}</text>
+        {detail && <text fg={theme.textDim}>{detail}</text>}
         <text>{""}</text>
-        <text fg="#565f89">
-          <span fg="#f7768e">y</span> Confirm{"  "}
-          <span fg="#7aa2f7">n</span> Cancel
+        <text fg={theme.textDim}>
+          <span fg={theme.error}>y</span> Confirm{"  "}
+          <span fg={theme.accent}>n</span> Cancel
         </text>
       </box>
     </box>
