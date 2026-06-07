@@ -1,1 +1,0 @@
-- [Conventional commits](feedback_conventional-commits.md) — Always use conventional commit format (feat/fix/chore etc)
