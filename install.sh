@@ -23,7 +23,38 @@ get_platform() {
   esac
 }
 
+uninstall() {
+  platform=$(get_platform)
+
+  if [ "$platform" = "windows" ]; then
+    install_dir="${ROOK_INSTALL_DIR:-$USERPROFILE/.rook/bin}"
+    target="${install_dir}/${BINARY_NAME}.exe"
+  else
+    install_dir="${ROOK_INSTALL_DIR:-/usr/local/bin}"
+    target="${install_dir}/${BINARY_NAME}"
+  fi
+
+  if [ ! -f "$target" ]; then
+    echo "rook is not installed at ${target}"
+    exit 1
+  fi
+
+  if [ ! -w "$install_dir" ]; then
+    echo "Removing ${target} (requires sudo)..."
+    sudo rm "$target"
+  else
+    rm "$target"
+  fi
+
+  echo "rook has been uninstalled."
+}
+
 main() {
+  if [ "${1:-}" = "--uninstall" ]; then
+    uninstall
+    return
+  fi
+
   platform=$(get_platform)
   arch=$(get_arch)
   artifact="rook-${platform}-${arch}"
