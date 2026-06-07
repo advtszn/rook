@@ -1,238 +1,328 @@
-import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react"
-import { useState, useEffect, useCallback, useRef } from "react"
-import type { Connection, Screen, TreeNode, ExplorerState } from "../types.ts"
-import { connectToRedis, scanKeys, disconnectRedis, getClient, getKeyValue, getKeyTTL, formatTTL, deleteKey, deleteNamespace } from "../lib/redis.ts"
-import { buildTree, getNodesAtPath, filterTree } from "../lib/tree.ts"
-import { ConfirmDialog } from "../components/confirm-dialog.tsx"
+import {
+  useKeyboard,
+  useRenderer,
+  useTerminalDimensions,
+} from "@opentui/react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import type { Connection, Screen, TreeNode, ExplorerState } from "../types.ts";
+import {
+  connectToRedis,
+  scanKeys,
+  disconnectRedis,
+  getClient,
+  getKeyValue,
+  getKeyTTL,
+  formatTTL,
+  deleteKey,
+  deleteNamespace,
+} from "../lib/redis.ts";
+import { buildTree, getNodesAtPath, filterTree } from "../lib/tree.ts";
+import { updateConnection } from "../lib/config.ts";
+import { ConfirmDialog } from "../components/confirm-dialog.tsx";
 
 interface Props {
-  connection: Connection
-  restoreState?: ExplorerState
-  onNavigate: (screen: Screen) => void
+  connection: Connection;
+  restoreState?: ExplorerState;
+  onNavigate: (screen: Screen) => void;
 }
 
 function clamp(val: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, val))
+  return Math.max(min, Math.min(max, val));
 }
 
-function scrollForIndex(selected: number, viewHeight: number, currentScroll: number): number {
-  if (selected < 0) return 0
-  if (selected < currentScroll) return selected
-  if (selected >= currentScroll + viewHeight) return selected - viewHeight + 1
-  return Math.max(0, currentScroll)
+function scrollForIndex(
+  selected: number,
+  viewHeight: number,
+  currentScroll: number,
+): number {
+  if (selected < 0) return 0;
+  if (selected < currentScroll) return selected;
+  if (selected >= currentScroll + viewHeight) return selected - viewHeight + 1;
+  return Math.max(0, currentScroll);
 }
 
 interface Preview {
-  type: string
-  value: string
-  ttl: string
+  type: string;
+  value: string;
+  ttl: string;
 }
 
-export function ExplorerScreen({ connection, restoreState, onNavigate }: Props) {
-  const renderer = useRenderer()
-  const { width, height } = useTerminalDimensions()
-  const [tree, setTree] = useState<TreeNode[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [searchMode, setSearchMode] = useState(false)
+export function ExplorerScreen({
+  connection,
+  restoreState,
+  onNavigate,
+}: Props) {
+  const renderer = useRenderer();
+  const { width, height } = useTerminalDimensions();
+  const [tree, setTree] = useState<TreeNode[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchMode, setSearchMode] = useState(false);
 
-  const [path, setPath] = useState<number[]>(restoreState?.path ?? [])
-  const [selectedIndex, setSelectedIndex] = useState(restoreState?.selectedIndex ?? 0)
+  const [path, setPath] = useState<number[]>(restoreState?.path ?? []);
+  const [selectedIndex, setSelectedIndex] = useState(
+    restoreState?.selectedIndex ?? 0,
+  );
   // remember selected index per path so going back restores position
-  const selectedCache = useRef<Map<string, number>>(new Map())
+  const selectedCache = useRef<Map<string, number>>(new Map());
   // scroll offsets per column
-  const [leftScroll, setLeftScroll] = useState(0)
-  const [midScroll, setMidScroll] = useState(0)
-  const [rightScroll, setRightScroll] = useState(0)
+  const [leftScroll, setLeftScroll] = useState(0);
+  const [midScroll, setMidScroll] = useState(0);
+  const [rightScroll, setRightScroll] = useState(0);
   // delete confirmation
-  const [confirmDelete, setConfirmDelete] = useState<{ key: string; isNamespace: boolean } | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<{
+    key: string;
+    isNamespace: boolean;
+  } | null>(null);
   // preview for leaf nodes
-  const [preview, setPreview] = useState<Preview | null>(null)
-  const [previewKey, setPreviewKey] = useState<string | null>(null)
+  const [preview, setPreview] = useState<Preview | null>(null);
+  const [previewKey, setPreviewKey] = useState<string | null>(null);
+  // auto-refresh
+  const AUTO_REFRESH_INTERVALS = [5, 10, 30] as const;
+  const savedInterval = connection.autoRefreshInterval;
+  const initialIndex = savedInterval
+    ? AUTO_REFRESH_INTERVALS.indexOf(savedInterval as 5 | 10 | 30)
+    : -1;
+  const [autoRefreshIndex, setAutoRefreshIndex] =
+    useState<number>(initialIndex);
+  const autoRefreshInterval =
+    autoRefreshIndex >= 0 ? AUTO_REFRESH_INTERVALS[autoRefreshIndex]! : null;
+  const [copied, setCopied] = useState(false);
 
-  const colHeight = height - 5
+  const colHeight = height - 5;
 
-  const displayTree = searchQuery ? filterTree(tree, searchQuery) : tree
+  const displayTree = searchQuery ? filterTree(tree, searchQuery) : tree;
 
   // Derive columns from path
-  const { parent: parentNodes, current: currentNodes } = getNodesAtPath(displayTree, path)
-  const parentIndex = path.length > 0 ? path[path.length - 1]! : -1
+  const { parent: parentNodes, current: currentNodes } = getNodesAtPath(
+    displayTree,
+    path,
+  );
+  const parentIndex = path.length > 0 ? path[path.length - 1]! : -1;
 
-  const safeSelected = currentNodes.length > 0 ? clamp(selectedIndex, 0, currentNodes.length - 1) : -1
-  const selectedNode = safeSelected >= 0 ? currentNodes[safeSelected] ?? null : null
-  const rightNodes = selectedNode ? selectedNode.children : []
+  const safeSelected =
+    currentNodes.length > 0
+      ? clamp(selectedIndex, 0, currentNodes.length - 1)
+      : -1;
+  const selectedNode =
+    safeSelected >= 0 ? (currentNodes[safeSelected] ?? null) : null;
+  const rightNodes = selectedNode ? selectedNode.children : [];
 
   // Load preview for leaf nodes
   useEffect(() => {
     if (!selectedNode || selectedNode.children.length > 0) {
-      setPreview(null)
-      setPreviewKey(null)
-      return
+      setPreview(null);
+      setPreviewKey(null);
+      return;
     }
-    if (selectedNode.fullKey === previewKey) return
+    if (selectedNode.fullKey === previewKey) return;
 
-    let cancelled = false
-    const client = getClient()
-    if (!client) return
+    let cancelled = false;
+    const client = getClient();
+    if (!client) return;
 
-    setPreviewKey(selectedNode.fullKey)
-    getKeyValue(client, selectedNode.fullKey).then(async (kv) => {
-      if (cancelled) return
-      const ttl = await getKeyTTL(client, selectedNode.fullKey)
-      setPreview({ type: kv.type, value: kv.value, ttl: formatTTL(ttl) })
-    }).catch(() => {
-      if (!cancelled) setPreview(null)
-    })
-    return () => { cancelled = true }
-  }, [selectedNode?.fullKey])
+    setPreviewKey(selectedNode.fullKey);
+    getKeyValue(client, selectedNode.fullKey)
+      .then(async (kv) => {
+        if (cancelled) return;
+        const ttl = await getKeyTTL(client, selectedNode.fullKey);
+        setPreview({ type: kv.type, value: kv.value, ttl: formatTTL(ttl) });
+      })
+      .catch(() => {
+        if (!cancelled) setPreview(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedNode?.fullKey]);
 
   // Reset mid scroll when path changes
   useEffect(() => {
-    setMidScroll(0)
-  }, [path.join(",")])
+    setMidScroll(0);
+  }, [path.join(",")]);
 
   // Keep mid scroll in sync with selection
   useEffect(() => {
-    setMidScroll((s: number) => scrollForIndex(safeSelected, colHeight, s))
-  }, [safeSelected, colHeight])
+    setMidScroll((s: number) => scrollForIndex(safeSelected, colHeight, s));
+  }, [safeSelected, colHeight]);
 
   // Reset right scroll when selection changes
   useEffect(() => {
-    setRightScroll(0)
-  }, [selectedNode?.fullKey])
+    setRightScroll(0);
+  }, [selectedNode?.fullKey]);
 
   // Keep left scroll in sync with parent highlight
   useEffect(() => {
     if (parentIndex >= 0) {
-      setLeftScroll((s: number) => scrollForIndex(parentIndex, colHeight, s))
+      setLeftScroll((s: number) => scrollForIndex(parentIndex, colHeight, s));
     }
-  }, [parentIndex, colHeight])
+  }, [parentIndex, colHeight]);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
     async function load() {
       try {
-        const client = connectToRedis(connection)
-        await client.connect()
-        const keys = await scanKeys(client)
+        const client = connectToRedis(connection);
+        await client.connect();
+        const keys = await scanKeys(client);
         if (!cancelled) {
-          setTree(buildTree(keys))
-          setLoading(false)
+          setTree(buildTree(keys));
+          setLoading(false);
         }
       } catch (e: any) {
         if (!cancelled) {
-          setError(e.message ?? "Connection failed")
-          setLoading(false)
+          setError(e.message ?? "Connection failed");
+          setLoading(false);
         }
       }
     }
-    load()
-    return () => { cancelled = true }
-  }, [connection])
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [connection]);
 
   const navigateRight = useCallback(() => {
-    if (safeSelected < 0 || !selectedNode) return
+    if (safeSelected < 0 || !selectedNode) return;
     if (selectedNode.children.length > 0) {
-      selectedCache.current.set(path.join(","), safeSelected)
-      setPath((p: number[]) => [...p, safeSelected])
-      const cachedIdx = selectedCache.current.get([...path, safeSelected].join(","))
-      setSelectedIndex(cachedIdx ?? 0)
+      selectedCache.current.set(path.join(","), safeSelected);
+      setPath((p: number[]) => [...p, safeSelected]);
+      const cachedIdx = selectedCache.current.get(
+        [...path, safeSelected].join(","),
+      );
+      setSelectedIndex(cachedIdx ?? 0);
     } else if (selectedNode.isLeaf) {
       onNavigate({
         type: "inspector",
         connection,
         redisKey: selectedNode.fullKey,
         explorerState: { path, selectedIndex: safeSelected },
-      })
+      });
     }
-  }, [safeSelected, selectedNode, path, connection, onNavigate])
+  }, [safeSelected, selectedNode, path, connection, onNavigate]);
 
   const refreshTree = useCallback(async () => {
-    const client = getClient()
-    if (!client) return
-    const keys = await scanKeys(client)
-    setTree(buildTree(keys))
-  }, [])
+    const client = getClient();
+    if (!client) return;
+    const keys = await scanKeys(client);
+    setTree(buildTree(keys));
+  }, []);
+
+  // Auto-refresh polling
+  useEffect(() => {
+    if (autoRefreshInterval === null) return;
+    const id = setInterval(() => {
+      refreshTree();
+    }, autoRefreshInterval * 1000);
+    return () => clearInterval(id);
+  }, [autoRefreshInterval, refreshTree]);
+
+  useEffect(() => {
+    if (!copied) return;
+    const id = setTimeout(() => setCopied(false), 1500);
+    return () => clearTimeout(id);
+  }, [copied]);
 
   const handleDeleteConfirm = useCallback(async () => {
-    const client = getClient()
-    if (!client || !confirmDelete) return
+    const client = getClient();
+    if (!client || !confirmDelete) return;
     if (confirmDelete.isNamespace) {
-      await deleteNamespace(client, confirmDelete.key)
+      await deleteNamespace(client, confirmDelete.key);
     } else {
-      await deleteKey(client, confirmDelete.key)
+      await deleteKey(client, confirmDelete.key);
     }
-    setConfirmDelete(null)
-    await refreshTree()
-    setSelectedIndex((i: number) => clamp(i, 0, Math.max(0, currentNodes.length - 2)))
-  }, [confirmDelete, currentNodes.length, refreshTree])
+    setConfirmDelete(null);
+    await refreshTree();
+    setSelectedIndex((i: number) =>
+      clamp(i, 0, Math.max(0, currentNodes.length - 2)),
+    );
+  }, [confirmDelete, currentNodes.length, refreshTree]);
 
   const navigateLeft = useCallback(() => {
-    if (path.length === 0) return
-    const prevIdx = path[path.length - 1]!
-    setPath((p: number[]) => p.slice(0, -1))
-    setSelectedIndex(prevIdx)
-  }, [path, onNavigate])
+    if (path.length === 0) return;
+    const prevIdx = path[path.length - 1]!;
+    setPath((p: number[]) => p.slice(0, -1));
+    setSelectedIndex(prevIdx);
+  }, [path, onNavigate]);
 
   useKeyboard((key) => {
-    if (confirmDelete) return
+    if (confirmDelete) return;
 
     if (searchMode) {
       if (key.name === "escape") {
-        setSearchMode(false)
-        setSearchQuery("")
-        return
+        setSearchMode(false);
+        setSearchQuery("");
+        return;
       }
       if (key.name === "return") {
-        setSearchMode(false)
-        return
+        setSearchMode(false);
+        return;
       }
       if (key.name === "backspace") {
-        setSearchQuery((q: string) => q.slice(0, -1))
-        setSelectedIndex(0)
-        setPath([])
-        return
+        setSearchQuery((q: string) => q.slice(0, -1));
+        setSelectedIndex(0);
+        setPath([]);
+        return;
       }
       if (key.sequence && key.sequence.length === 1 && !key.ctrl && !key.meta) {
-        setSearchQuery((q: string) => q + key.sequence)
-        setSelectedIndex(0)
-        setPath([])
-        return
+        setSearchQuery((q: string) => q + key.sequence);
+        setSelectedIndex(0);
+        setPath([]);
+        return;
       }
-      return
+      return;
     }
 
     if (key.name === "q" || key.name === "escape") {
-      disconnectRedis()
-      onNavigate({ type: "connections" })
-      return
+      disconnectRedis();
+      onNavigate({ type: "connections" });
+      return;
     }
 
     if (key.name === "j" || key.name === "down") {
-      setSelectedIndex((i: number) => clamp(i + 1, 0, currentNodes.length - 1))
+      setSelectedIndex((i: number) => clamp(i + 1, 0, currentNodes.length - 1));
     } else if (key.name === "k" || key.name === "up") {
-      setSelectedIndex((i: number) => clamp(i - 1, 0, currentNodes.length - 1))
-    } else if (key.name === "l" || key.name === "right" || key.name === "return") {
-      navigateRight()
+      setSelectedIndex((i: number) => clamp(i - 1, 0, currentNodes.length - 1));
+    } else if (
+      key.name === "l" ||
+      key.name === "right" ||
+      key.name === "return"
+    ) {
+      navigateRight();
     } else if (key.name === "h" || key.name === "left") {
-      navigateLeft()
+      navigateLeft();
     } else if (key.name === "g" && !key.shift) {
-      setSelectedIndex(0)
+      setSelectedIndex(0);
     } else if (key.name === "g" && key.shift) {
-      setSelectedIndex(Math.max(0, currentNodes.length - 1))
+      setSelectedIndex(Math.max(0, currentNodes.length - 1));
     } else if (key.sequence === "/") {
-      setSearchMode(true)
-      setSearchQuery("")
-      setPath([])
-      setSelectedIndex(0)
+      setSearchMode(true);
+      setSearchQuery("");
+      setPath([]);
+      setSelectedIndex(0);
+    } else if (key.name === "r" && !key.shift) {
+      refreshTree();
+    } else if (key.name === "r" && key.shift) {
+      setAutoRefreshIndex((i: number) => {
+        const next = i + 1 >= AUTO_REFRESH_INTERVALS.length ? -1 : i + 1;
+        const interval = next >= 0 ? AUTO_REFRESH_INTERVALS[next]! : null;
+        updateConnection(connection.name, { autoRefreshInterval: interval });
+        return next;
+      });
+    } else if (key.name === "y" && !key.shift) {
+      if (selectedNode) {
+        renderer.copyToClipboardOSC52(selectedNode.fullKey);
+        setCopied(true);
+      }
     } else if (key.name === "d" && key.shift) {
       if (selectedNode) {
-        const isNamespace = selectedNode.children.length > 0 && !selectedNode.isLeaf
-        setConfirmDelete({ key: selectedNode.fullKey, isNamespace })
+        const isNamespace =
+          selectedNode.children.length > 0 && !selectedNode.isLeaf;
+        setConfirmDelete({ key: selectedNode.fullKey, isNamespace });
       }
     }
-  })
+  });
 
   if (error) {
     return (
@@ -246,7 +336,7 @@ export function ExplorerScreen({ connection, restoreState, onNavigate }: Props) 
         <text>{""}</text>
         <text fg="#565f89">Press any key to return.</text>
       </box>
-    )
+    );
   }
 
   if (loading) {
@@ -254,31 +344,41 @@ export function ExplorerScreen({ connection, restoreState, onNavigate }: Props) 
       <box flexDirection="column" width="100%" height="100%" padding={1}>
         <text fg="#7aa2f7">Connecting to {connection.name}...</text>
       </box>
-    )
+    );
   }
 
-  const atRoot = path.length === 0
+  const atRoot = path.length === 0;
   const colWidth = atRoot
     ? Math.floor((width - 2) / 2)
-    : Math.floor((width - 2) / 3)
+    : Math.floor((width - 2) / 3);
 
   // Build the path string
-  const pathParts: string[] = [connection.name]
-  let walkNodes = displayTree
+  const pathParts: string[] = [];
+  let walkNodes = displayTree;
   for (const idx of path) {
-    const node = walkNodes[idx]
-    if (!node) break
-    pathParts.push(node.key)
-    walkNodes = node.children
+    const node = walkNodes[idx];
+    if (!node) break;
+    pathParts.push(node.key);
+    walkNodes = node.children;
   }
-  if (selectedNode) pathParts.push(selectedNode.key)
-  const pathStr = pathParts.join(" / ")
+  if (selectedNode) pathParts.push(selectedNode.key);
+  const pathStr = `${connection.name}:${pathParts.join("/")}`;
 
   return (
     <box flexDirection="column" width="100%" height="100%">
       {/* Header */}
-      <box height={1} paddingX={1}>
+      <box
+        height={1}
+        paddingX={1}
+        flexDirection="row"
+        justifyContent="space-between"
+      >
         <text fg="#7aa2f7">{connection.name}</text>
+        {autoRefreshInterval !== null && (
+          <text fg="#e0af68">
+            {"  "}⚠ Auto-refresh enabled — may increase Redis read overhead
+          </text>
+        )}
       </box>
 
       <box flexDirection="row" flexGrow={1}>
@@ -332,54 +432,109 @@ export function ExplorerScreen({ connection, restoreState, onNavigate }: Props) 
       </box>
 
       {/* Status bar */}
-      <box width="100%" height={1} backgroundColor="#1a1b26" paddingX={1}>
+      <box
+        width="100%"
+        height={1}
+        flexDirection="row"
+        justifyContent="space-between"
+        backgroundColor="#1a1b26"
+        paddingX={1}
+      >
         {searchMode ? (
           <text fg="#c0caf5">/{searchQuery}▎</text>
         ) : (
           <text fg="#565f89">
-            {searchQuery && <span fg="#787c99">/{searchQuery}{"  "}</span>}
-            <span fg="#7aa2f7">h</span>/<span fg="#7aa2f7">l</span> Navigate{"  "}
+            {searchQuery && (
+              <span fg="#787c99">
+                /{searchQuery}
+                {"  "}
+              </span>
+            )}
+            {autoRefreshInterval !== null && (
+              <span fg="#e0af68">
+                ↻ {autoRefreshInterval}s{"  "}
+              </span>
+            )}
+            <span fg="#7aa2f7">h</span>/<span fg="#7aa2f7">l</span> Navigate
+            {"  "}
             <span fg="#7aa2f7">j</span>/<span fg="#7aa2f7">k</span> Select{"  "}
             <span fg="#7aa2f7">/</span> Search{"  "}
-            <span fg="#7aa2f7">Enter</span> Open{"  "}
+            <span fg="#7aa2f7">r</span> Refresh{"  "}
+            <span fg="#7aa2f7">R</span> Auto{"  "}
+            <span fg="#7aa2f7">y</span> Copy{"  "}
             <span fg="#7aa2f7">D</span> Delete{"  "}
             <span fg="#7aa2f7">q</span> Back
           </text>
         )}
+
+        {/* Path bar */}
+        <box height={1} backgroundColor="#1a1b26" paddingX={1}>
+          <text fg="#565f89">{pathStr}</text>
+        </box>
       </box>
 
-      {/* Path bar */}
-      <box width="100%" height={1} backgroundColor="#1a1b26" paddingX={1}>
-        <text fg="#565f89">{pathStr}</text>
-      </box>
+      {copied && (
+        <box
+          position="absolute"
+          top={0}
+          right={2}
+          padding={1}
+        >
+          <box
+            width={24}
+            height={3}
+            backgroundColor="#1a1b26"
+            style={{ borderStyle: "rounded", borderColor: "#9ece6a" }}
+            justifyContent="center"
+            alignItems="center"
+          >
+            <text fg="#9ece6a">Copied to clipboard</text>
+          </box>
+        </box>
+      )}
 
       {confirmDelete && (
         <ConfirmDialog
-          message={confirmDelete.isNamespace
-            ? `Delete all keys under "${confirmDelete.key}:*"?`
-            : `Delete key "${confirmDelete.key}"?`}
-          detail={confirmDelete.isNamespace ? "This will delete all keys in this namespace." : undefined}
+          message={
+            confirmDelete.isNamespace
+              ? `Delete all keys under "${confirmDelete.key}:*"?`
+              : `Delete key "${confirmDelete.key}"?`
+          }
+          detail={
+            confirmDelete.isNamespace
+              ? "This will delete all keys in this namespace."
+              : undefined
+          }
           onConfirm={handleDeleteConfirm}
           onCancel={() => setConfirmDelete(null)}
         />
       )}
     </box>
-  )
+  );
 }
 
 interface ColumnProps {
-  nodes: TreeNode[]
-  highlightIndex: number
-  selectedIndex: number
-  width: number
-  maxItems: number
-  scrollOffset: number
-  dimmed: boolean
-  borderColor: string
+  nodes: TreeNode[];
+  highlightIndex: number;
+  selectedIndex: number;
+  width: number;
+  maxItems: number;
+  scrollOffset: number;
+  dimmed: boolean;
+  borderColor: string;
 }
 
-function Column({ nodes, highlightIndex, selectedIndex, width, maxItems, scrollOffset, dimmed, borderColor }: ColumnProps) {
-  const visible = nodes.slice(scrollOffset, scrollOffset + maxItems)
+function Column({
+  nodes,
+  highlightIndex,
+  selectedIndex,
+  width,
+  maxItems,
+  scrollOffset,
+  dimmed,
+  borderColor,
+}: ColumnProps) {
+  const visible = nodes.slice(scrollOffset, scrollOffset + maxItems);
 
   return (
     <box
@@ -395,50 +550,54 @@ function Column({ nodes, highlightIndex, selectedIndex, width, maxItems, scrollO
         <text fg="#3b4261">{"  "}(empty)</text>
       ) : (
         visible.map((node: TreeNode, vi: number) => {
-          const actualIdx = scrollOffset + vi
-          const isSelected = actualIdx === selectedIndex
-          const isHighlighted = actualIdx === highlightIndex
-          const hasChildren = node.children.length > 0
-          const suffix = hasChildren ? "/" : ""
+          const actualIdx = scrollOffset + vi;
+          const isSelected = actualIdx === selectedIndex;
+          const isHighlighted = actualIdx === highlightIndex;
+          const hasChildren = node.children.length > 0;
+          const suffix = hasChildren ? "/" : "";
 
-          let fg = dimmed ? "#565f89" : "#787c99"
-          let bg: string | undefined
+          let fg = dimmed ? "#565f89" : "#787c99";
+          let bg: string | undefined;
           if (isSelected) {
-            fg = "#c0caf5"
-            bg = "#283457"
+            fg = "#c0caf5";
+            bg = "#283457";
           } else if (isHighlighted) {
-            fg = "#7aa2f7"
-            bg = "#1f2335"
+            fg = "#7aa2f7";
+            bg = "#1f2335";
           }
 
           return (
             <text key={`${node.fullKey}-${actualIdx}`} fg={fg} bg={bg}>
-              {isSelected ? " › " : "   "}{node.key}{suffix}
+              {isSelected ? " › " : "   "}
+              {node.key}
+              {suffix}
             </text>
-          )
+          );
         })
       )}
     </box>
-  )
+  );
 }
 
 interface ValuePreviewProps {
-  preview: Preview
-  width: number
-  maxItems: number
-  scrollOffset: number
-  borderColor: string
+  preview: Preview;
+  width: number;
+  maxItems: number;
+  scrollOffset: number;
+  borderColor: string;
 }
 
-function ValuePreview({ preview, width, maxItems, scrollOffset, borderColor }: ValuePreviewProps) {
-  const lines = preview.value.split("\n")
-  const header = [
-    `Type: ${preview.type}`,
-    `TTL:  ${preview.ttl}`,
-    "",
-  ]
-  const allLines = [...header, ...lines]
-  const visible = allLines.slice(scrollOffset, scrollOffset + maxItems)
+function ValuePreview({
+  preview,
+  width,
+  maxItems,
+  scrollOffset,
+  borderColor,
+}: ValuePreviewProps) {
+  const lines = preview.value.split("\n");
+  const header = [`Type: ${preview.type}`, `TTL:  ${preview.ttl}`, ""];
+  const allLines = [...header, ...lines];
+  const visible = allLines.slice(scrollOffset, scrollOffset + maxItems);
 
   return (
     <box
@@ -448,14 +607,15 @@ function ValuePreview({ preview, width, maxItems, scrollOffset, borderColor }: V
       flexDirection="column"
     >
       {visible.map((line: string, i: number) => {
-        const actualIdx = scrollOffset + i
-        const isHeader = actualIdx < header.length
+        const actualIdx = scrollOffset + i;
+        const isHeader = actualIdx < header.length;
         return (
           <text key={actualIdx} fg={isHeader ? "#bb9af7" : "#787c99"}>
-            {"  "}{line}
+            {"  "}
+            {line}
           </text>
-        )
+        );
       })}
     </box>
-  )
+  );
 }

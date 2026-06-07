@@ -37,3 +37,12 @@ export function deleteConnection(name: string) {
   config.connections = config.connections.filter((c) => c.name !== name)
   saveConfig(config)
 }
+
+export function updateConnection(name: string, updates: Partial<Connection>) {
+  const config = loadConfig()
+  const idx = config.connections.findIndex((c) => c.name === name)
+  if (idx >= 0) {
+    config.connections[idx] = { ...config.connections[idx]!, ...updates }
+    saveConfig(config)
+  }
+}

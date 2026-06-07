@@ -4,6 +4,7 @@ export interface Connection {
   port: number
   password: string | null
   database: number
+  autoRefreshInterval?: number | null
 }
 
 export interface Config {
