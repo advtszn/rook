@@ -8,8 +8,6 @@
 		"dev": "bun run --watch src/index.tsx",
 		"build": "bun build --compile src/index.tsx --outfile dist/rook",
 		"build:linux-x64": "bun build --compile --target=bun-linux-x64 src/index.tsx --outfile dist/rook-linux-x64",
-		"build:linux-arm64": "bun build --compile --target=bun-linux-arm64 src/index.tsx --outfile dist/rook-linux-arm64",
-		"build:darwin-x64": "bun build --compile --target=bun-darwin-x64 src/index.tsx --outfile dist/rook-darwin-x64",
 		"build:darwin-arm64": "bun build --compile --target=bun-darwin-arm64 src/index.tsx --outfile dist/rook-darwin-arm64"
 	},
 	"devDependencies": {

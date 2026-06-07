@@ -20,9 +20,6 @@ jobs:
           - os: macos-latest
             target: bun-darwin-arm64
             artifact: rook-darwin-arm64
-          - os: macos-13
-            target: bun-darwin-x64
-            artifact: rook-darwin-x64
 
     runs-on: ${{ matrix.os }}
 
@@ -71,7 +68,6 @@ jobs:
           version="${GITHUB_REF_NAME#v}"
 
           darwin_arm64_sha=$(sha256sum artifacts/rook-darwin-arm64.tar.gz | cut -d' ' -f1)
-          darwin_x64_sha=$(sha256sum artifacts/rook-darwin-x64.tar.gz | cut -d' ' -f1)
           linux_x64_sha=$(sha256sum artifacts/rook-linux-x64.tar.gz | cut -d' ' -f1)
 
           git clone "https://x-access-token:${TAP_TOKEN}@github.com/advtszn/homebrew-rook.git" tap
@@ -88,11 +84,6 @@ jobs:
               on_arm do
                 url "https://github.com/advtszn/rook/releases/download/v#{version}/rook-darwin-arm64.tar.gz"
                 sha256 "${darwin_arm64_sha}"
-              end
-
-              on_intel do
-                url "https://github.com/advtszn/rook/releases/download/v#{version}/rook-darwin-x64.tar.gz"
-                sha256 "${darwin_x64_sha}"
               end
             end
 
