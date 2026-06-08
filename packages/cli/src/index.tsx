@@ -1,4 +1,4 @@
-import { existsSync, unlinkSync } from "node:fs";
+import { existsSync, realpathSync, unlinkSync } from "node:fs";
 import { createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
 import { useCallback, useRef, useState } from "react";
@@ -8,10 +8,10 @@ import { InspectorScreen } from "./screens/inspector.tsx";
 import type { Screen } from "./types.ts";
 
 if (process.argv.includes("--uninstall")) {
-	const binary = process.argv[0];
-	if (!binary || !existsSync(binary)) {
-		console.error("Could not determine binary path.");
-		process.exit(1);
+	const binary = realpathSync(process.execPath);
+	if (binary.includes("/Cellar/") || binary.includes("/homebrew/")) {
+		console.log("rook was installed via Homebrew. Run: brew uninstall rook");
+		process.exit(0);
 	}
 	try {
 		unlinkSync(binary);
