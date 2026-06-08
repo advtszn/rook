@@ -26,7 +26,7 @@ bun dev
 
 ```
 apps/
-  docs/       # Documentation site (Nextra)
+  docs/       # Documentation site (fumadocs)
 packages/
   cli/        # Terminal UI application
 ```
