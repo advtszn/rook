@@ -1,3 +1,4 @@
+import { existsSync, unlinkSync } from "node:fs";
 import { createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
 import { useCallback, useRef, useState } from "react";
@@ -5,6 +6,22 @@ import { ConnectionsScreen } from "./screens/connections.tsx";
 import { ExplorerScreen } from "./screens/explorer.tsx";
 import { InspectorScreen } from "./screens/inspector.tsx";
 import type { Screen } from "./types.ts";
+
+if (process.argv.includes("--uninstall")) {
+	const binary = process.argv[0];
+	if (!binary || !existsSync(binary)) {
+		console.error("Could not determine binary path.");
+		process.exit(1);
+	}
+	try {
+		unlinkSync(binary);
+	} catch {
+		const { execSync } = await import("node:child_process");
+		execSync(`sudo rm "${binary}"`, { stdio: "inherit" });
+	}
+	console.log("rook has been uninstalled.");
+	process.exit(0);
+}
 
 function App() {
 	const [screen, setScreen] = useState<Screen>({ type: "connections" });
