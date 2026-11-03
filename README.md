@@ -4,6 +4,14 @@ A terminal UI for exploring Redis, built with [OpenTUI](https://opentui.com) and
 
 ## Install
 
+### Homebrew
+
+```sh
+brew install advtszn/tap/rook
+```
+
+### Shell script
+
 ```sh
 curl -fsSL https://raw.githubusercontent.com/advtszn/rook/main/install.sh | sh
 ```
